@@ -48,6 +48,7 @@ void AABCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 	EnhancedInputComponent->BindAction(IAJump, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 	EnhancedInputComponent->BindAction(IALook, ETriggerEvent::Triggered, this, &AABCharacterPlayer::Look);
 	EnhancedInputComponent->BindAction(IAMove, ETriggerEvent::Triggered, this, &AABCharacterPlayer::Move);
+	EnhancedInputComponent->BindAction(IAAttack, ETriggerEvent::Triggered, this, &AABCharacterPlayer::Attack);
 }
 
 void AABCharacterPlayer::Look(const FInputActionValue& Value)
@@ -73,4 +74,9 @@ void AABCharacterPlayer::Move(const FInputActionValue& Value)
 	AddMovementInput(ForwardVector, MovementVector.X);
 	AddMovementInput(RightVector, MovementVector.Y);
 
+}
+
+void AABCharacterPlayer::Attack(const FInputActionValue& Value)
+{
+	ComboCommand();
 }

@@ -36,7 +36,7 @@ AABActor::AABActor()
 void AABActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	Body->OnComponentHit.AddDynamic(this, &AABActor::OnMyHit);
 }
 
 // Called every frame
@@ -44,5 +44,10 @@ void AABActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void AABActor::OnMyHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	Destroy();
 }
 

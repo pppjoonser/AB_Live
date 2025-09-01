@@ -26,4 +26,24 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// ComboAttack Section
+public:
+	void ComboCommand();
+
+	virtual void ComboBegin();
+	virtual void ComboEnd(class UAnimMontage* TargetMontage, bool IsPropertyEnded);
+	virtual void SetComboCheckTimer();
+	virtual void ComboCheck();
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Animation)
+	TObjectPtr<class UAnimMontage> ComboAttackMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation)
+	TObjectPtr<class UABComboAttackData> ComboAttackData;
+
+	int32 CurrentCombo = 0;
+
+	FTimerHandle ComboTimerHandle;
+	bool HasNextComboCommand = false;
 };
