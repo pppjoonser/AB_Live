@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Interface/ABAttackInterface.h"
 #include "ABCharacterBase.generated.h"
 
 UCLASS()
-class ARENABATTLE_API AABCharacterBase : public ACharacter
+class ARENABATTLE_API AABCharacterBase : public ACharacter, public IABAttackInterface
 {
 	GENERATED_BODY()
 
@@ -25,6 +26,15 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+	//DeadSection
+public:
+	virtual void SetDead();
+	void PlayDeadAnimation();
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation)
+	TObjectPtr<class UAnimMontage> DeadMontage;
 
 	// ComboAttack Section
 public:
@@ -46,4 +56,6 @@ protected:
 
 	FTimerHandle ComboTimerHandle;
 	bool HasNextComboCommand = false;
+
+	void AttackHitCheck() override;
 };
