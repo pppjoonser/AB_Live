@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interface/ABAttackInterface.h"
+#include "CharacterData/ABCharacterStat.h"
+#include "CharacterStat/ABStatComponent.h"
 #include "ABCharacterBase.generated.h"
 
 UCLASS()
@@ -28,7 +30,29 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	virtual float TakeDamage(float Damage, struct FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	virtual void PostInitializeComponents() override;
+
+public:
+	FORCEINLINE TObjectPtr<UABStatComponent> GetStatComponent()
+	{
+		return StatComponent;
+	}
+
+	void ApplyStat(const FABCharacterStat& BaseStat, const FABCharacterStat& ModifierStat);
+
+	int32 GetLevel();
+	void SetLevel(int32 InNewLevel);
+protected:
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UABStatComponent> StatComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<class UWidgetComponent> HpBarComponent;
+
 	//DeadSection
+
 public:
 	virtual void SetDead();
 	void PlayDeadAnimation();

@@ -7,6 +7,9 @@
 #include "CharacterData/ABCharacterStat.h"
 #include "ABStatComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FOnHpZeroDelegate);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnHpChangedDelegate, float);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnStatChangedDelegate, const FABCharacterStat&, const FABCharacterStat&);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ARENABATTLE_API UABStatComponent : public UActorComponent
@@ -36,11 +39,13 @@ public:
 	FORCEINLINE void SetBaseStat(const FABCharacterStat& InBaseStat)
 	{
 		BaseStat = InBaseStat;
+		OnStatChanged.Broadcast(BaseStat, ModifierStat);
 	}
 
 	FORCEINLINE void SetModifierStat(const FABCharacterStat& InModifierStat)
 	{
 		ModifierStat = InModifierStat;
+		OnStatChanged.Broadcast(BaseStat, ModifierStat);
 	}
 public:
 	float ApplyDamage(float InDamage);
@@ -49,17 +54,25 @@ public:
 	FORCEINLINE void AddHp(float InHealAmount)
 	{
 		CurrentHp = FMath::Clamp(CurrentHp + InHealAmount, 0, GetTotalStat().MaxHp);
+		OnHpChanged.Broadcast(CurrentHp);
 	}
 
 	FORCEINLINE void AddBaseStat(const FABCharacterStat InAddBaseStat)
 	{
 		BaseStat = BaseStat + InAddBaseStat;
+		OnStatChanged.Broadcast(BaseStat, ModifierStat);
 	}
 
 	FORCEINLINE void AddModifierStat(const FABCharacterStat InAddModifierStat)
 	{
 		ModifierStat = ModifierStat + InAddModifierStat;
+		OnStatChanged.Broadcast(BaseStat, ModifierStat);
 	}
+
+public:
+	FOnHpZeroDelegate OnHpZero;
+	FOnHpChangedDelegate OnHpChanged;
+	FOnStatChangedDelegate OnStatChanged;
 
 protected:
 	UPROPERTY(Transient, VisibleInstanceOnly, Category = Stat)

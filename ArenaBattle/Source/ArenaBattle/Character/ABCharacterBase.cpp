@@ -8,6 +8,8 @@
 #include "CharacterData/ABComboAttackData.h"
 #include "Engine/DamageEvents.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/WidgetComponent.h"
+#include "UI/ABHpBarWidget.h"
 
 // Sets default values
 AABCharacterBase::AABCharacterBase()
@@ -65,6 +67,23 @@ AABCharacterBase::AABCharacterBase()
 	{
 		DeadMontage = DeadMontageRef.Object;
 	}
+
+	//Stat Sction
+	StatComponent = CreateDefaultSubobject<UABStatComponent>(TEXT("Stat"));
+
+	//Widget Component
+	HpBarComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("HpBar"));
+	HpBarComponent->SetupAttachment(GetMesh());
+	HpBarComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 200.0f));
+
+	static ConstructorHelpers::FClassFinder<UABHpBarWidget> HpBarWidgetRef(TEXT("/Script/UMGEditor.WidgetBlueprint'/Game/UI/WBP_HpBar.WBP_HpBar_C'"));
+	if (HpBarWidgetRef.Succeeded())
+	{
+		HpBarComponent->SetWidgetClass(HpBarWidgetRef.Class);
+		HpBarComponent->SetWidgetSpace(EWidgetSpace::Screen);
+		HpBarComponent->SetDrawAtDesiredSize(true);
+		HpBarComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
 }
 
 // Called when the game starts or when spawned
@@ -92,14 +111,55 @@ float AABCharacterBase::TakeDamage(float Damage, FDamageEvent const& DamageEvent
 {
 	Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 
-	SetDead();
+	StatComponent->ApplyDamage(Damage);
 	return Damage;
+}
+
+void AABCharacterBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	StatComponent->OnHpZero.AddUObject(this, &AABCharacterBase::SetDead);
+	StatComponent->OnStatChanged.AddUObject(this, &AABCharacterBase::ApplyStat);
+
+	if (HpBarComponent == nullptr)
+		return;
+	HpBarComponent->InitWidget();
+	UABHpBarWidget* HpBarWidget = Cast<UABHpBarWidget>(HpBarComponent->GetUserWidgetObject());
+	if (HpBarWidget)
+	{
+		StatComponent->OnHpChanged.AddUObject(HpBarWidget, &UABHpBarWidget::UpdateHp);
+		StatComponent->OnStatChanged.AddUObject(HpBarWidget, &UABHpBarWidget::UpdateStat);
+	}
+}
+
+void AABCharacterBase::ApplyStat(const FABCharacterStat& BaseStat, const FABCharacterStat& ModifierStat)
+{
+	float MovementSpeed = (BaseStat + ModifierStat).MovementSpeed;
+	GetCharacterMovement()->MaxWalkSpeed = MovementSpeed;
+}
+
+int32 AABCharacterBase::GetLevel()
+{
+	if (StatComponent)
+		return StatComponent->GetCurrentLevel();
+
+	return 0;
+}
+
+void AABCharacterBase::SetLevel(int32 InNewLevel)
+{
+	if (StatComponent)
+		StatComponent->SetLevel(InNewLevel);
 }
 
 void AABCharacterBase::SetDead()
 {
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 	PlayDeadAnimation();
+
+	if (HpBarComponent)
+		HpBarComponent->SetHiddenInGame(true);
 }
 
 void AABCharacterBase::PlayDeadAnimation()
@@ -133,7 +193,7 @@ void AABCharacterBase::ComboBegin()
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 
 	// Animation Setting
-	const float AttackSpeedRate = 1.0f;
+	const float AttackSpeedRate = StatComponent->GetTotalStat().AttackSpeed;;
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	AnimInstance->Montage_Play(ComboAttackMontage, AttackSpeedRate);
 
@@ -155,7 +215,7 @@ void AABCharacterBase::ComboEnd(UAnimMontage* TargetMontage, bool IsPropertyEnde
 void AABCharacterBase::SetComboCheckTimer()
 {
 	int32 ComboIndex = CurrentCombo - 1;
-	const float AttackSpeedRate = 1.0f;
+	const float AttackSpeedRate = StatComponent->GetTotalStat().AttackSpeed;
 	float ComboEffectiveTime = (ComboAttackData->EffectiveFrameCount[ComboIndex] / ComboAttackData->FrameRate);
 
 	if (ComboEffectiveTime > 0.0f)
@@ -188,9 +248,9 @@ void AABCharacterBase::AttackHitCheck()
 	FCollisionQueryParams CollisionParams;
 	CollisionParams.AddIgnoredActor(this);
 
-	const float AttackRange = 40.0f;
-	const float AttackRadius = 50.0f;
-	const float AtackDamage = 30.0f;
+	const float AttackRange = StatComponent->GetTotalStat().AttackRange;
+	const float AttackRadius = StatComponent->GetTotalStat().AttackRadius;
+	const float AtackDamage = StatComponent->GetTotalStat().Attack;
 
 	const FVector Start = GetActorLocation() + GetActorForwardVector() *
 		GetCapsuleComponent()->GetScaledCapsuleRadius();
